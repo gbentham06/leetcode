@@ -1,40 +1,54 @@
-#include <vector>
-#include <map>
-#include <algorithm>
-#include <climits>
-
 class Solution {
 public:
-    long long minCost(std::vector<int>& basket1, std::vector<int>& basket2) {
-        std::map<int, int> total_counts;
-        for (int fruit : basket1) total_counts[fruit]++;
-        for (int fruit : basket2) total_counts[fruit]++;
+    using int2=pair<int, int>;
+    static long long minCost(vector<int>& basket1, vector<int>& basket2) {
+        const int n=basket1.size();
+        unordered_map<int, int> freq;
+        freq.reserve(n);
 
-        long long min_val = LLONG_MAX;
-        for (auto const& [fruit, count] : total_counts) {
-            if (count % 2 != 0) return -1;
-            min_val = std::min(min_val, (long long)fruit);
+        int minX=INT_MAX;// May swap twice with minX
+        for (int i=0; i<n; i++) {
+            freq[basket1[i]]++;
+            freq[basket2[i]]--;
+            minX=min(minX, min(basket1[i], basket2[i]));
         }
-        
-        std::vector<long long> fruits_to_swap;
-        std::map<int, int> count1;
-        for (int fruit : basket1) count1[fruit]++;
-        
-        for (auto const& [fruit, total_count] : total_counts) {
-            int diff = count1[fruit] - (total_count / 2);
-            for (int i = 0; i < abs(diff); ++i) {
-                fruits_to_swap.push_back(fruit);
+        // need to swap for backets
+        // when x>=2*minX, just set x=2*minX & add |f|/2
+        const int minX2=2*minX;
+        vector<int2> B1={{minX2, 0}}, B2={{minX2, 0}}; 
+        for (auto& [x, f] : freq) {
+            if (f%2!=0) return -1;
+            if (f>0) {
+                if (x<minX2) B1.emplace_back(x, f/2);
+                else B1[0].second+=f/2;
+            }
+            else if (f<0) {
+                if (x<minX2) B2.emplace_back(x, -f/2);
+                else B2[0].second-=f/2;
             }
         }
-        
-        std::sort(fruits_to_swap.begin(), fruits_to_swap.end());
-        
-        long long total_cost = 0;
-        int swaps_to_make = fruits_to_swap.size() / 2;
-        for (int i = 0; i < swaps_to_make; ++i) {
-            total_cost += std::min(fruits_to_swap[i], 2 * min_val);
+
+        sort(B1.begin(), B1.end());
+        sort(B2.begin(), B2.end());
+
+        long long cost=0;
+        const int m1=B1.size(), m2=B2.size();
+        // Greedy here
+        for (int i=0, j=m2-1; i<m1 && j>=0;) {
+            auto& [b1, f1]=B1[i];
+            auto& [b2, f2]=B2[j];
+            int f0=min(f1, f2);
+            // direct swap or 2 times swaps with minX
+            long long swapCost=min(min(b1, b2), 2*minX);
+            cost+=swapCost*f0;
+
+            f1-=f0;
+            f2-=f0;
+            i+=(f1==0);
+            j-=(f2==0);
         }
-        
-        return total_cost;
+
+        return cost;
     }
 };
+
